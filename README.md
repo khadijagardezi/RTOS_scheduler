@@ -12,12 +12,11 @@ An interactive, web-based simulator for visualizing Real-Time Operating System (
 * **Client-Side Only**: Runs entirely in your browser. No backend or server setup required.
 
 ## 🛠️ Getting Started
-
-1. Clone the repository or download the source code.
-2. Open `index.html` in any modern web browser (Chrome, Firefox, Safari, Edge).
-3. Add your tasks using the sidebar form (T1 and T2 are provided as default examples).
-4. Select your desired scheduling algorithm from the dropdown menu.
-5. Click **▶ Run Simulation** to generate the Gantt chart.
+### 
+1. Visit https://rtosscheduler.sandrini.cc/
+2. Add your tasks using the sidebar form (T1 and T2 are provided as default examples).
+3. Select your desired scheduling algorithm from the dropdown menu.
+4. Click **▶ Run Simulation** to generate the Gantt chart.
 
 ## 🧠 Supported Algorithms
 
