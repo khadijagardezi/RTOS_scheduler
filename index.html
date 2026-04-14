@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTOS Scheduler Simulator</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; padding: 20px; color: #333; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; margin-top: 0; }
+        
+        .layout { display: flex; gap: 30px; flex-wrap: wrap; }
+        .sidebar { flex: 1; min-width: 300px; background: #fdfdfd; padding: 20px; border: 1px solid #eee; border-radius: 8px; }
+        .main-content { flex: 2; min-width: 500px; }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        input, select, button { width: 100%; padding: 8px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        
+        .btn-primary { background-color: #3498db; color: white; cursor: pointer; border: none; font-weight: bold; margin-top: 10px; padding: 10px; }
+        .btn-primary:hover { background-color: #2980b9; }
+        .btn-run { background-color: #2ecc71; font-size: 16px; padding: 12px; margin-bottom: 20px; }
+        .btn-run:hover { background-color: #27ae60; }
+        .btn-delete { background-color: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; }
+
+        #chart { width: 100%; height: 450px; margin-top: 10px; border: 1px solid #eee; border-radius: 8px; }
+        .status { margin-top: 10px; font-size: 14px; font-weight: bold; color: #e74c3c; }
+
+        .legend-box { margin-top: 20px; padding: 20px; background: #fdfdfd; border: 1px solid #eee; border-radius: 8px; font-size: 14px; line-height: 1.5; }
+        .legend-box h3 { margin-top: 0; font-size: 16px; color: #2c3e50; margin-bottom: 15px;}
+        .legend-flex { display: flex; gap: 40px; flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 8px; }
+        .legend-color { width: 24px; height: 14px; display: inline-block; margin-right: 10px; border: 1px solid #ccc; border-radius: 2px;}
+        .legend-pattern { background: repeating-linear-gradient(-45deg, #ccc, #ccc 3px, #fff 3px, #fff 6px); }
+
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #555; }
+        .footer h3 { font-size: 16px; color: #2c3e50; margin-bottom: 10px; margin-top: 0; }
+        .footer ul { padding-left: 20px; line-height: 1.6; font-size: 13px; color: #666; margin-bottom: 20px; }
+        .footer-credits { text-align: center; font-size: 12px; color: #999; margin-top: 30px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>RTOS Scheduler Simulator</h1>
+
+    <div class="intro-box">
+        <p><strong>What is this?</strong> This simulator visualizes how different Real-Time Operating System (RTOS) scheduling algorithms prioritize and execute tasks over time. Add your custom tasks below, select a scheduling algorithm, and run the simulation to generate an interactive chart.</p>
+        
+        <h3>Supported Algorithms</h3>
+        <ul>
+            <li><strong>EDF (Earliest Deadline First):</strong> Dynamic priority. The scheduler always chooses the ready task with the closest absolute deadline. Preemptive.</li>
+            <li><strong>RM (Rate Monotonic):</strong> Static priority. Tasks with shorter periods are assigned higher priority. It is optimal for periodic tasks. Preemptive.</li>
+            <li><strong>FCFS (First Come First Serve):</strong> Non-preemptive. The scheduler simply executes tasks in the exact order they arrive, ignoring deadlines and periods.</li>
+        </ul>
+    </div>
+    
+    <div class="layout">
+        <div class="sidebar">
+            <h2>Add Task</h2>
+            <div class="form-group">
+                <label>Task Name</label>
+                <input type="text" id="t_name" placeholder="e.g., T1">
+            </div>
+            <div class="form-group">
+                <label>Computation Time (C)</label>
+                <input type="number" id="t_comp" min="1" value="2">
+            </div>
+            <div class="form-group">
+                <label>Arrival Time (A)</label>
+                <input type="number" id="t_arr" min="0" value="0">
+            </div>
+            <div class="form-group">
+                <label>Period (P) - leave blank if aperiodic</label>
+                <input type="number" id="t_period" min="1" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label>Deadline (D) - usually equals Period</label>
+                <input type="number" id="t_dead" min="1" placeholder="Optional">
+            </div>
+            <button class="btn-primary" onclick="addTask()">+ Add Task</button>
+
+            <h2 style="margin-top: 30px;">Task List</h2>
+            <table id="taskTable">
+                <thead>
+                    <tr>
+                        <th>Task</th><th>C</th><th>A</th><th>P</th><th>D</th><th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+            <div class="legend-box">
+                <h3>How to Read the Chart</h3>
+                <div class="legend-flex">
+                    <div>
+                        <strong>Visual Key:</strong><br><br>
+                        <div class="legend-item"><span class="legend-color" style="background: #3498db;"></span> Normal Execution</div>
+                        <div class="legend-item"><span class="legend-color legend-pattern"></span> Late Execution (Past Deadline)</div>
+                        <div class="legend-item"><span style="margin-right: 10px; font-size: 14px; color: black;">⚫</span> Task Completed (Finish Line)</div>
+                        <div class="legend-item"><span style="margin-right: 14px; margin-left: 4px; font-size: 14px; color: black; font-weight: bold;">↓</span> Task Arrival</div>
+                        <div class="legend-item"><span style="margin-right: 14px; margin-left: 4px; font-size: 14px; color: black; font-weight: bold;">↑</span> Deadline</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <label for="algorithm">Select Scheduling Algorithm:</label>
+            <select id="algorithm" style="margin-bottom: 15px;">
+                <option value="edf">Earliest Deadline First (EDF)</option>
+                <option value="rm">Rate Monotonic (RM)</option>
+                <option value="fcfs">First Come First Serve (FCFS)</option>
+            </select>
+            
+            <button class="btn-primary btn-run" onclick="runSimulation()">▶ Run Simulation</button>
+            <div id="statusMessage" class="status"></div>
+            
+            <div id="chart"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <h3>Disclaimers and Simulation Notes</h3>
+        <h5> Use it at your own risk, scheduling algorithms and visualizations may be wrong.</h5>
+        <ul>
+            <li><strong>Overhead:</strong> Context switching and scheduling computation time are assumed to be zero.</li>
+            <li><strong>Time Limit:</strong> The simulation automatically calculates 1 Hyperperiod (the Least Common Multiple of all periodic tasks) and stops there. To prevent browser freezing on complex inputs, the timeline is strictly capped at 200 ticks.</li>
+            <li><strong>Defaults:</strong> If a deadline is left blank for a periodic task, the simulation automatically assumes the relative deadline is equal to the period.</li>
+        </ul>
+        <div class="footer-credits">
+            Built for educational RTOS visualization by Sandrini Mattia.
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 1. Data Structures & State
+    // ==========================================
+    class Task {
+        constructor(name, computation, arrival = 0, period = null, deadline = null) {
+            this.name = name;
+            this.computation = computation;
+            this.arrival = arrival;
+            this.period = period;
+            this.deadline = deadline;
+            this.reset();
+        }
+
+        reset() {
+            this.remaining = this.computation;
+            this.is_completed = false;
+            this.is_late = false;
+            
+            // FIX: Treat deadline as absolute for aperiodic tasks, and relative for periodic tasks
+            if (this.deadline !== null) {
+                this.abs_deadline = this.is_periodic ? this.arrival + this.deadline : this.deadline;
+            } else {
+                this.abs_deadline = null;
+            }
+            
+            this.effective_arrival = this.arrival;
+        }
+
+        get is_periodic() {
+            return this.period !== null && !isNaN(this.period);
+        }
+    }
+
+    let globalTasks = [];
+
+    const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+    const lcm = (a, b) => (a * b) / gcd(a, b);
+
+    // ==========================================
+    // 2. UI Functions 
+    // ==========================================
+    function addTask() {
+        const name = document.getElementById("t_name").value || `T${globalTasks.length + 1}`;
+        const comp = parseInt(document.getElementById("t_comp").value);
+        const arr = parseInt(document.getElementById("t_arr").value) || 0;
+        const periodVal = document.getElementById("t_period").value;
+        const deadVal = document.getElementById("t_dead").value;
+
+        const period = periodVal ? parseInt(periodVal) : null;
+        const deadline = deadVal ? parseInt(deadVal) : period; 
+
+        if (isNaN(comp) || comp <= 0) {
+            alert("Computation time must be greater than 0");
+            return;
+        }
+
+        globalTasks.push(new Task(name, comp, arr, period, deadline));
+        renderTable();
+        document.getElementById("t_name").value = `T${globalTasks.length + 1}`;
+    }
+
+    function deleteTask(index) {
+        globalTasks.splice(index, 1);
+        renderTable();
+    }
+
+    function renderTable() {
+        const tbody = document.querySelector("#taskTable tbody");
+        tbody.innerHTML = "";
+        globalTasks.forEach((t, index) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${t.name}</strong></td>
+                    <td>${t.computation}</td>
+                    <td>${t.arrival}</td>
+                    <td>${t.period || '-'}</td>
+                    <td>${t.deadline || '-'}</td>
+                    <td><button class="btn-delete" onclick="deleteTask(${index})">X</button></td>
+                </tr>
+            `;
+        });
+    }
+
+    window.onload = () => {
+        globalTasks.push(new Task("T1", 2, 0, 4, 4));
+        globalTasks.push(new Task("T2", 3, 0, 6, 6));
+        renderTable();
+        runSimulation();
+    };
+
+    // ==========================================
+    // 3. Schedulers & Engine
+    // ==========================================
+    const schedulers = {
+        edf: (ready_tasks) => ready_tasks.length === 0 ? null : ready_tasks.reduce((min, t) => ((t.abs_deadline ?? Infinity) < (min.abs_deadline ?? Infinity)) ? t : min),
+        rm:  (ready_tasks) => ready_tasks.length === 0 ? null : ready_tasks.reduce((min, t) => ((t.period ?? Infinity) < (min.period ?? Infinity)) ? t : min),
+        fcfs: (ready_tasks, current_task) => {
+            if (ready_tasks.length === 0) return null;
+            if (current_task && !current_task.is_completed) return current_task;
+            return ready_tasks.reduce((min, t) => (t.effective_arrival < min.effective_arrival) ? t : min);
+        }
+    };
+
+    function runSimulation() {
+        if (globalTasks.length === 0) {
+            document.getElementById("chart").innerHTML = "<p style='padding:20px'>Please add at least one task.</p>";
+            return;
+        }
+
+        const algoKey = document.getElementById("algorithm").value;
+        const scheduler = schedulers[algoKey];
+        const log = [];
+        let missedDeadlines = false;
+        
+        let current_task = null;
+        let start_time = 0;
+
+        // NEW: Track events per task instead of globally
+        let taskEvents = [];
+
+        let periods = globalTasks.filter(t => t.is_periodic).map(t => t.period);
+        let limit = periods.length > 0 ? periods.reduce(lcm) : 30; 
+        if (limit > 200) limit = 200; 
+
+        for (let t of globalTasks) {
+            t.reset();
+            taskEvents.push({ task: t.name, type: 'arrival', time: t.effective_arrival });
+            if (t.abs_deadline !== null) taskEvents.push({ task: t.name, type: 'deadline', time: t.abs_deadline });
+        }
+
+        for (let tick = 0; tick < limit; tick++) {
+            // Respawn periodic tasks
+            for (let task of globalTasks) {
+                if (task.is_periodic && tick > task.effective_arrival) {
+                    if ((tick - task.effective_arrival) % task.period === 0) {
+                        if (!task.is_completed) missedDeadlines = true; 
+                        task.is_completed = false;
+                        task.remaining = task.computation;
+                        if (task.deadline !== null) task.abs_deadline = tick + task.deadline;
+                        
+                        // Record new events tied specifically to this task
+                        taskEvents.push({ task: task.name, type: 'arrival', time: tick });
+                        if (task.abs_deadline !== null) taskEvents.push({ task: task.name, type: 'deadline', time: task.abs_deadline });
+                    }
+                }
+                if (!task.is_completed && task.abs_deadline !== null && tick >= task.abs_deadline) {
+                    missedDeadlines = true;
+                }
+            }
+
+            let ready_tasks = globalTasks.filter(t => t.effective_arrival <= tick && !t.is_completed);
+            let next_task = scheduler(ready_tasks, current_task);
+
+            if (current_task && current_task.abs_deadline === tick && tick > start_time) {
+                log.push({ Task: current_task.name, Start: start_time, Finish: tick, Preempted: true, Late: false });
+                start_time = tick;
+            }
+
+            if (next_task !== current_task) {
+                if (current_task && !current_task.is_completed && tick > start_time) {
+                    let isLate = current_task.abs_deadline !== null && tick > current_task.abs_deadline;
+                    log.push({ Task: current_task.name, Start: start_time, Finish: tick, Preempted: true, Late: isLate });
+                }
+                current_task = next_task;
+                start_time = tick;
+            }
+
+            if (current_task) {
+                current_task.remaining--;
+                if (current_task.remaining === 0) {
+                    current_task.is_completed = true;
+                    let isLate = current_task.abs_deadline !== null && tick >= current_task.abs_deadline;
+                    log.push({ Task: current_task.name, Start: start_time, Finish: tick + 1, Preempted: false, Late: isLate });
+                    current_task = null;
+                }
+            }
+        }
+
+        if (current_task && !current_task.is_completed) {
+            let isLate = current_task.abs_deadline !== null && limit > current_task.abs_deadline;
+            log.push({ Task: current_task.name, Start: start_time, Finish: limit, Preempted: true, Late: isLate });
+        }
+
+        document.getElementById("statusMessage").innerText = missedDeadlines ? "⚠️ Warning: One or more deadlines were missed!" : "";
+        drawGanttChart(log, globalTasks.map(t => t.name), limit, taskEvents, algoKey);
+    }
+
+    // ==========================================
+    // 4. Plotly Chart Generation
+    // ==========================================
+    function drawGanttChart(log, taskNames, limit, taskEvents, algoKey) {
+        const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#34495e'];
+        
+        // Plotly renders categorical y-axes from bottom to top, so we reverse the array 
+        // to make T1 appear at the top. We need this reversed array to calculate Y coordinates.
+        const reversedTaskNames = [...taskNames].reverse();
+
+        const traces = [];
+        
+        taskNames.forEach((taskName, index) => {
+            const taskLog = log.filter(entry => entry.Task === taskName);
+            const normalLog = taskLog.filter(entry => !entry.Late);
+            const lateLog = taskLog.filter(entry => entry.Late);
+            const color = colors[index % colors.length];
+
+            // 1. Trace for Normal, On-Time Execution
+            if (normalLog.length > 0) {
+                traces.push({
+                    name: taskName,
+                    type: 'bar',
+                    orientation: 'h',
+                    y: normalLog.map(entry => entry.Task),
+                    x: normalLog.map(entry => entry.Finish - entry.Start),
+                    base: normalLog.map(entry => entry.Start),
+                    marker: { 
+                        color: color, 
+                        line: { color: 'white', width: 2 } 
+                    },
+                    text: normalLog.map(() => taskName), 
+                    textposition: 'inside', 
+                    insidetextanchor: 'middle', 
+                    hovertext: normalLog.map(entry => `<b>${taskName}</b><br>Start: ${entry.Start}<br>Finish: ${entry.Finish}`),
+                    hoverinfo: 'text'
+                });
+            }
+
+            // 2. Trace for Late Execution (Adds Hatch Pattern + Red Border)
+            if (lateLog.length > 0) {
+                traces.push({
+                    name: `${taskName} (Late)`,
+                    type: 'bar',
+                    orientation: 'h',
+                    y: lateLog.map(entry => entry.Task),
+                    x: lateLog.map(entry => entry.Finish - entry.Start),
+                    base: lateLog.map(entry => entry.Start),
+                    marker: { 
+                        color: '#fff', // White base to create stripes with hatching
+                        pattern: {
+                            shape: '/', // Uses standard diagonal hatching to match visually
+                            fgcolor: '#ccc', // Use light gray color from legend gradient
+                            fgopacity: 1 // Opaque hatching lines
+                        }
+                    },
+                    text: lateLog.map(() => taskName), 
+                    textposition: 'inside', 
+                    insidetextanchor: 'middle', 
+                    hovertext: lateLog.map(entry => `<b>${taskName}</b><br>Start: ${entry.Start}<br>Finish: ${entry.Finish}<br><i>(LATE)</i>`),
+                    hoverinfo: 'text'
+                });
+            }
+        });
+        const completionDots = {
+            type: 'scatter',
+            mode: 'markers',
+            x: log.filter(entry => !entry.Preempted).map(entry => entry.Finish),
+            y: log.filter(entry => !entry.Preempted).map(entry => entry.Task),
+            marker: { 
+                color: 'black', 
+                size: 14, 
+                symbol: 'circle' 
+            },
+            hoverinfo: 'skip', // Keeps the hover clean so it only shows the bar's hover info
+            showlegend: false
+            
+        };
+
+        let shapes = [];
+        let annotations = [];
+
+        // Map events to their specific Task's Y-coordinate
+        taskEvents.forEach(event => {
+            if (event.time > limit) return;
+            
+            // Find the integer Y-coordinate for the task (0 is bottom, 1 is next up, etc.)
+            let yPos = reversedTaskNames.indexOf(event.task);
+            
+            // Bar thickness in Plotly is roughly ±0.4 from the center Y integer
+            let barTop = yPos + 0.4;
+            let barBottom = yPos - 0.4;
+            
+
+            if (event.type === 'arrival') {
+                shapes.push({
+                    type: 'line', x0: event.time, x1: event.time, 
+                    y0: barBottom, y1: barTop, yref: 'y', // yref: 'y' locks it to the data axis
+                    line: { dash: 'dot', color: 'black', width: 2 }
+                });
+                annotations.push({
+                    x: event.time, y: barBottom, yref: 'y',
+                    showarrow: true, arrowhead: 2, arrowsize: 1.5, arrowcolor: 'black',
+                    ax: 0, ay: -15 // Points down
+                });
+            } else if (event.type === 'deadline') {
+                shapes.push({
+                    type: 'line', x0: event.time, x1: event.time, 
+                    y0: barBottom, y1: barTop, yref: 'y',
+                    line: { dash: 'dot', color: 'black', width: 2 }
+                });
+                annotations.push({
+                    x: event.time, y: barTop, yref: 'y',
+                    showarrow: true, arrowhead: 2, arrowsize: 1.5, arrowcolor: 'black',
+                    ax: 0, ay: 15 // Points up
+                });
+            }
+        });
+
+        const layout = {
+            title: `Schedule Over 1 Major Cycle (${limit} ticks)`,
+            barmode: 'stack',
+            xaxis: { title: 'Ticks', tickmode: 'linear', dtick: 1, range: [0, limit] },
+            yaxis: { title: '', categoryorder: 'array', categoryarray: reversedTaskNames },
+            showlegend: false,
+            margin: { l: 50, r: 20, t: 50, b: 50 },
+            shapes: shapes,
+            annotations: annotations
+        };
+        
+        Plotly.newPlot('chart', [...traces, completionDots], layout, {displayModeBar: false});
+
+        // ==========================================
+        // 5. Draw Legend
+        // ==========================================
+
+        const legendHtml = `
+            <div class="legend-box">
+                <h3>How to Read the Chart</h3>
+                <div class="legend-flex">
+                    <div>
+                        <strong>Visual Key:</strong><br><br>
+                        <div class="legend-item"><span class="legend-color" style="background: #3498db;"></span> Normal Execution</div>
+                        <div class="legend-item"><span class="legend-color legend-pattern"></span> Late Execution (Past Deadline)</div>
+                        <div class="legend-item"><span style="margin-right: 10px; font-size: 14px; color: black;">⚫</span> Task Completed (Finish Line)</div>
+                        <div class="legend-item"><span style="margin-right: 14px; margin-left: 4px; font-size: 14px; color: black; font-weight: bold;">↓</span> Task Arrival</div>
+                        <div class="legend-item"><span style="margin-right: 14px; margin-left: 4px; font-size: 14px; color: black; font-weight: bold;">↑</span> Deadline</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Find or create the legend container below the chart
+        let legendContainer = document.getElementById("legendContainer");
+        if (!legendContainer) {
+            legendContainer = document.createElement("div");
+            legendContainer.id = "legendContainer";
+            document.getElementById("chart").parentNode.appendChild(legendContainer);
+        }
+        legendContainer.innerHTML = legendHtml;
+    }
+</script>
+
+</body>
+</html>
