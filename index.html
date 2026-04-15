@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RTOS Scheduler Simulator</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; padding: 20px; color: #333; }
         .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -124,7 +126,707 @@
             <div id="chart"></div>
         </div>
     </div>
+    <div id="rtos-algorithm-summary-widget" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; padding: 20px; border-radius: 8px;">
+        
+        <style>
+            #rtos-algorithm-summary-widget .table-wrapper {
+                overflow-x: auto;
+                background: #fff;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            #rtos-algorithm-summary-widget table {
+                width: 100%;
+                border-collapse: collapse;
+                text-align: left;
+                margin: 0;
+            }
+            #rtos-algorithm-summary-widget th, 
+            #rtos-algorithm-summary-widget td {
+                padding: 15px;
+                border-bottom: 1px solid #eee;
+                font-size: 14px;
+            }
+            #rtos-algorithm-summary-widget th {
+                background-color: #2c3e50;
+                color: #ffffff;
+                font-weight: 600;
+                white-space: nowrap;
+            }
+            #rtos-algorithm-summary-widget tr:hover {
+                background-color: #f9fbfd;
+            }
+            #rtos-algorithm-summary-widget .aperiodic-row td {
+                border-left: 4px solid #3498db;
+            }
+            #rtos-algorithm-summary-widget .periodic-row td {
+                border-left: 4px solid #2ecc71;
+            }
+            #rtos-algorithm-summary-widget .mixed-row td {
+                border-left: 4px solid #f39c12;
+            }
+            #rtos-algorithm-summary-widget .badge {
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.85em;
+                font-weight: bold;
+                color: #fff;
+            }
+            #rtos-algorithm-summary-widget .bg-aperiodic { background-color: #3498db; }
+            #rtos-algorithm-summary-widget .bg-periodic { background-color: #2ecc71; }
+            #rtos-algorithm-summary-widget .bg-mixed { background-color: #f39c12; }
+            #rtos-algorithm-summary-widget .bg-optimal { background-color: #9b59b6; }
+            #rtos-algorithm-summary-widget .bg-heuristic { background-color: #e67e22; }
+            #rtos-algorithm-summary-widget h2 {
+                text-align: center;
+                color: #2c3e50;
+                margin-top: 0;
+                margin-bottom: 20px;
+            }
+        </style>
 
+        <h2>RTOS Scheduling Algorithms Summary</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Algorithm</th>
+                        <th>Type</th>
+                        <th>Task Environment / Constraints</th>
+                        <th>Principle</th>
+                        <th>Complexity</th>
+                        <th>Optimality</th>
+                        <th>Schedulability Guarantee</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="aperiodic-row">
+                        <td><strong>EDD</strong><br><small>(Jackson '55)</small></td>
+                        <td><span class="badge bg-aperiodic">Aperiodic</span></td>
+                        <td>Sync activation, Independent<br><small>1|sync|L<sub>max</sub></small></td>
+                        <td>Earliest Due Date</td>
+                        <td>O(n log n)</td>
+                        <td><span class="badge bg-optimal">Optimal</span></td>
+                        <td>&sum;<sub>k=1</sub><sup>i</sup> C<sub>k</sub> &lt; d<sub>i</sub></td>
+                    </tr>
+                    <tr class="aperiodic-row">
+                        <td><strong>EDF</strong><br><small>(Horn '74)</small></td>
+                        <td><span class="badge bg-aperiodic">Aperiodic</span></td>
+                        <td>Async activation, Preemptive, Independent<br><small>1|preem|L<sub>max</sub></small></td>
+                        <td>Earliest Deadline First</td>
+                        <td>O(n<sup>2</sup>)</td>
+                        <td><span class="badge bg-optimal">Optimal</span></td>
+                        <td>&sum;<sub>k=1</sub><sup>i</sup> c<sub>k</sub>(t) &lt; d<sub>i</sub></td>
+                    </tr>
+                    <tr class="aperiodic-row">
+                        <td><strong>Tree Search</strong><br><small>(Bratley '71)</small></td>
+                        <td><span class="badge bg-aperiodic">Aperiodic</span></td>
+                        <td>Async activation, Non-preemptive, Independent</td>
+                        <td>Tree Search</td>
+                        <td>O(n &middot; n!)</td>
+                        <td><span class="badge bg-optimal">Optimal</span></td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="aperiodic-row">
+                        <td><strong>LDF</strong><br><small>(Lawler '73)</small></td>
+                        <td><span class="badge bg-aperiodic">Aperiodic</span></td>
+                        <td>Sync activation, Precedence (DAG)<br><small>1|(prec,sync)|L<sub>max</sub></small></td>
+                        <td>Latest Deadline First</td>
+                        <td>O(n<sup>2</sup>)</td>
+                        <td><span class="badge bg-optimal">Optimal</span></td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="aperiodic-row">
+                        <td><strong>EDF*</strong><br><small>(Chetto '90)</small></td>
+                        <td><span class="badge bg-aperiodic">Aperiodic</span></td>
+                        <td>Async preemptive, Precedence (DAG)<br><small>1|(prec,sync)|L<sub>max</sub></small></td>
+                        <td>Modified EDF (Alters a<sub>j</sub>, d<sub>j</sub>)</td>
+                        <td>O(n<sup>2</sup>)</td>
+                        <td><span class="badge bg-optimal">Optimal</span></td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="aperiodic-row">
+                        <td><strong>Spring</strong><br><small>(Stankovic '87)</small></td>
+                        <td><span class="badge bg-aperiodic">Aperiodic</span></td>
+                        <td>Async non-preemptive, Precedence (DAG)</td>
+                        <td>Heuristic Search</td>
+                        <td>O(n<sup>2</sup>)</td>
+                        <td><span class="badge bg-heuristic">Heuristic</span></td>
+                        <td>-</td>
+                    </tr>
+
+                    <tr class="periodic-row">
+                        <td><strong>RMA</strong><br><small>(Liu & Layland '73)</small></td>
+                        <td><span class="badge bg-periodic">Periodic</span></td>
+                        <td>Static Priority, d<sub>i</sub> = T<sub>i</sub><br><small>1|fixed priority|&sum; U<sub>i</sub></small></td>
+                        <td>Rate Monotonic</td>
+                        <td>-</td>
+                        <td><span class="badge bg-optimal">Optimal</span></td>
+                        <td>U = &sum; (C<sub>i</sub>/T<sub>i</sub>) &le; n(2<sup>1/n</sup>-1)</td>
+                    </tr>
+                    <tr class="periodic-row">
+                        <td><strong>DMA</strong><br><small>(Leung & Whitehead '82)</small></td>
+                        <td><span class="badge bg-periodic">Periodic</span></td>
+                        <td>Static Priority, d<sub>i</sub> &le; T<sub>i</sub><br><small>1|(fixed priority,D<sub>i</sub> &le; T<sub>i</sub>)|L<sub>max</sub></small></td>
+                        <td>Deadline Monotonic</td>
+                        <td>-</td>
+                        <td><span class="badge bg-optimal">Optimal</span></td>
+                        <td>D<sub>i</sub> &ge; C<sub>i</sub> + I<sub>i</sub></td>
+                    </tr>
+                    <tr class="periodic-row">
+                        <td><strong>EDF (Priority)</strong><br><small>(Liu & Layland '73)</small></td>
+                        <td><span class="badge bg-periodic">Periodic</span></td>
+                        <td>Dynamic Priority, d<sub>i</sub> = T<sub>i</sub><br><small>1|dyn priority|C<sub>max</sub></small></td>
+                        <td>Earliest Deadline First</td>
+                        <td>-</td>
+                        <td><span class="badge bg-optimal">Optimal</span></td>
+                        <td>U = &sum; (C<sub>i</sub>/T<sub>i</sub>) &le; 1</td>
+                    </tr>
+                    <tr class="periodic-row">
+                        <td><strong>PDA EDF</strong><br><small>(Baruah et al. '90)</small></td>
+                        <td><span class="badge bg-periodic">Periodic</span></td>
+                        <td>Dynamic Priority, d<sub>i</sub> &le; T<sub>i</sub><br><small>1|dyn priority|C<sub>max</sub></small></td>
+                        <td>Processor Demand Analysis</td>
+                        <td>-</td>
+                        <td><span class="badge bg-optimal">Optimal</span></td>
+                        <td>L &ge; &sum; (&lfloor;(L-D<sub>i</sub>)/T<sub>i</sub>&rfloor; + 1)C<sub>i</sub></td>
+                    </tr>
+
+                    <tr class="mixed-row">
+                        <td><strong>Polling Server (PS)</strong></td>
+                        <td><span class="badge bg-mixed">Mixed</span></td>
+                        <td>Static Priority Server (RM) + Aperiodic requests</td>
+                        <td>Periodic capacity C<sub>s</sub>, fully discharges if queue is empty at start</td>
+                        <td>-</td>
+                        <td><span class="badge bg-heuristic">Heuristic</span></td>
+                        <td>U<sub>ps</sub> &le; n [ (2 / (U<sub>s</sub> + 1))<sup>1/n</sup> - 1 ]</td>
+                    </tr>
+                    <tr class="mixed-row">
+                        <td><strong>Deferrable Server (DS)</strong></td>
+                        <td><span class="badge bg-mixed">Mixed</span></td>
+                        <td>Static Priority Server (RM) + Aperiodic requests</td>
+                        <td>Maintains capacity C<sub>s</sub> throughout the server period</td>
+                        <td>-</td>
+                        <td><span class="badge bg-heuristic">Heuristic</span></td>
+                        <td>U<sub>ds</sub> &le; n [ ((U<sub>s</sub> + 2) / (2U<sub>s</sub> + 1))<sup>1/n</sup> - 1 ]</td>
+                    </tr>
+                    <tr class="mixed-row">
+                        <td><strong>Total Bandwidth Server (TBS)</strong></td>
+                        <td><span class="badge bg-mixed">Mixed</span></td>
+                        <td>Dynamic Priority Server (EDF) + Aperiodic requests</td>
+                        <td>Deadlines assigned dynamically to not exceed bandwidth: d<sub>k</sub> = max(r<sub>k</sub>, d<sub>k-1</sub>) + C<sub>k</sub> / U<sub>s</sub></td>
+                        <td>-</td>
+                        <td><span class="badge bg-heuristic">Heuristic</span></td>
+                        <td>U<sub>p</sub> + U<sub>s</sub> &lt; 1</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="rtos-scheduling-document" style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 900px; margin: auto;">
+
+    <div style="text-align: center; margin-bottom: 2em;">
+        <h1>RTOS Scheduling Literature Review</h1>
+    </div>
+
+    <h2>1. Introduction</h2>
+    
+    <h3>1.1 Terminology</h3>
+    <ul>
+        <li><strong>Task</strong>: A process in the Real Time environment</li>
+        <li><strong>Active Task</strong>: A task that can be executed by the CPU</li>
+        <li><strong>Ready Task</strong>: a task waiting in the queue, waiting for the CPU</li>
+        <li><strong>Running Task</strong>: A task that is currently executed by the CPU</li>
+        <li><strong>Scheduling Algorithm</strong>: Algorithm that defines the task execution order</li>
+    </ul>
+
+    <h3>1.2 Scheduling</h3>
+    <p>Given a set of tasks <em>J = {J<sub>1</sub>, &dots;, J<sub>n</sub>}</em>, a schedule is an assignment of tasks to the processor so that each task is executed until completion.</p>
+    <p>Formally a schedule is:</p>
+    <p style="text-align: center;">
+        <em>s : &#8477;<sup>+</sup> &rarr; &#8469; &nbsp; such that &nbsp; &forall; t &isin; &#8477;<sup>+</sup>, &exist; t<sub>1</sub>, t<sub>2</sub> &isin; &#8477;<sup>+</sup> | &forall; t' &isin; [t<sub>1</sub>, t<sub>2</sub>), s(t) = s(t')</em>
+    </p>
+
+    <h3>1.3 Properties</h3>
+    <ul>
+        <li><strong>schedulability</strong>: A set of task is schedulable if there exists at least one algorithm that can produce a feasible schedule</li>
+        <li><strong>feasibility</strong>: A schedule is feasible if all task can be completed according to a set of specified constraints</li>
+    </ul>
+
+    <h3>1.4 Task Characterization</h3>
+    <p>The tasks have different properties, that are used to schedule them, accordingly to the scheduling algorithm. Given the task <em>J<sub>i</sub></em>:</p>
+    <ul>
+        <li><strong>Parameters</strong>
+            <ul>
+                <li><strong>Arrival time a<sub>i</sub></strong>: the time at which the task is ready to be executed</li>
+                <li><strong>Period time T<sub>i</sub></strong>: the recurring time at which the task is ready to be executed</li>
+                <li><strong>Computation time C<sub>i</sub></strong>: the time needed to execute the task (with no interruption)</li>
+                <li><strong>Deadline d<sub>i</sub></strong>: the time before which the task needs to conclude its execution</li>
+                <li><strong>Start time s<sub>i</sub></strong>: the time at which the task is starts running</li>
+                <li><strong>Finish time f<sub>i</sub></strong>: the time at which the task finished its execution</li>
+            </ul>
+        </li>
+        <li><strong>Metrics</strong>
+            <ul>
+                <li><strong>Response Time R<sub>i</sub> = f<sub>i</sub> - a<sub>i</sub></strong>: the interval of time from where the task is arrived to when the task finished its execution</li>
+                <li><strong>Lateness L<sub>i</sub> = f<sub>i</sub> - d<sub>i</sub></strong>: the residual time between the execution conclusion and the deadline</li>
+                <li><strong>Slack time X<sub>i</sub> = d<sub>i</sub> - a<sub>i</sub> - C<sub>i</sub></strong>: maximum time a task can be delayed to complete within its deadline</li>
+            </ul>
+        </li>
+    </ul>
+
+    <figure style="text-align: center;">
+        <img src="images/task_char.png" alt="Task parameters and metrics" style="width: 80%; max-width: 600px;">
+        <figcaption>Figure 1: Task parameters and metrics</figcaption>
+    </figure>
+
+    <h3>1.5 Constraints</h3>
+    <p>The feasibility constraints for the schedulability are:</p>
+    <ul>
+        <li><strong>Timing</strong>: the task ends their execution before their deadline, the missed deadline is divided into three classes: Hard (cause catastrophic consequence) , Soft (cause performance degradation) or Firm (causes no harm, but the result is useless)</li>
+        <li><strong>Precedence</strong>: the tasks are executed following precedence rule</li>
+        <li><strong>Resource</strong>: the task can only access the available resource (those not locked by other tasks)</li>
+    </ul>
+
+    <h4>1.5.1 Task Activation</h4>
+    <p>The task are infinite sequence of identical activities (instances)</p>
+    <ul>
+        <li><strong>Time activation</strong>
+            <ul>
+                <li><strong>Periodic Task</strong>: activated each period <em>T<sub>i</sub></em></li>
+            </ul>
+        </li>
+        <li><strong>Event activation</strong>
+            <ul>
+                <li><strong>Aperiodic Task</strong>: activation is not known and can vary over time</li>
+                <li><strong>Sporadic Task</strong>: is an aperiodic task than might activate again after a fixed inter-arrival time</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h4>1.5.2 Precedence Constraints</h4>
+    <p>The execution order of the tasks has to respect a precedence relation, usually expressed with a Direct Access Graph (DAG) and are denoted as:</p>
+    <ul>
+        <li><strong>Predecessor J<sub>a</sub> < J<sub>c</sub></strong>: the task <em>J<sub>a</sub></em> is a predecessor of the task <em>J<sub>c</sub></em></li>
+        <li><strong>Immediate predecessor J<sub>a</sub> &rarr; J<sub>b</sub></strong>: the task <em>J<sub>a</sub></em> is a immediate predecessor of the task <em>J<sub>b</sub></em></li>
+    </ul>
+
+    <figure style="text-align: center;">
+        <img src="images/DAG.png" alt="DAG: precedence graph" style="width: 80%; max-width: 600px;">
+        <figcaption>Figure 2: DAG: precedence graph</figcaption>
+    </figure>
+
+    <h4>1.5.3 Resource Constraints</h4>
+    <p>Resource access is particularly critical for Real Time OS, classical structure like semaphores can't be used</p>
+
+    <hr>
+
+    <h2>2. Scheduling Problem</h2>
+    <p>The scheduling is a nondeterministic polynomial (NP) complete problem</p>
+
+    <h3 id="scheduling_problem">2.1 Problem Definition</h3>
+    <p>Given</p>
+    <ul>
+        <li>a set of tasks <em>J = {J<sub>1</sub>,...,J<sub>n</sub>}</em> with their constraints</li>
+        <li>a set of processors <em>P = {P<sub>1</sub>,...,P<sub>n</sub>}</em></li>
+        <li>a set of resources <em>R = {R<sub>1</sub>,...,R<sub>n</sub>}</em></li>
+        <li>a set of precedence specified with a <em>DAG</em></li>
+    </ul>
+    <p>Scheduling is the process of assigning a processor <em>P<sub>j</sub></em> and resource <em>R<sub>k</sub></em> to a task <em>J<sub>i</sub></em> under their constraints</p>
+
+    <h3>2.2 Scheduler Classification</h3>
+    <p>Real-time scheduling disciplines are typically characterized by four primary design dimensions:</p>
+    <ul>
+        <li><strong>Preemption strategy</strong>
+            <ul>
+                <li><strong>Preemptive</strong>: the current task can be interrupted</li>
+                <li><strong>Non-preemptive</strong>: once a task starts, it runs to completion without interruption</li>
+            </ul>
+        </li>
+        <li><strong>Priority assignment</strong>
+            <ul>
+                <li><strong>Static</strong>: priorities are assigned before activation</li>
+                <li><strong>Dynamic</strong>: priorities can change during runtime</li>
+            </ul>
+        </li>
+        <li><strong>Decision timing</strong>
+            <ul>
+                <li><strong>Off-line</strong>: the schedule is pre-computed before the system start</li>
+                <li><strong>On-line</strong>: the schedule is made at run time as the tasks arrive</li>
+            </ul>
+        </li>
+        <li><strong>Optimality</strong>
+            <ul>
+                <li><strong>Optimal</strong>: Guaranteed to find a feasible schedule if one exists</li>
+                <li><strong>Heuristic</strong>: Uses rules of thumb for good enough results</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>2.3 Guaranteed Scheduling</h3>
+    <p>Since Hard Real Time system require feasibility of the schedule, it must be guaranteed in advance. Given this we can define two type of scheduler:</p>
+    <ul>
+        <li><strong>Static offline scheduling</strong>: Decisions are made at compile-time and requires almost no CPU overhead at runtime but offers zero flexibility</li>
+        <li><strong>Dynamic online scheduling</strong>: Decisions are made at run-time, feasibility is still guaranteed in advance by proving that in the worst case assumption, the mathematical properties of the algorithm ensure it</li>
+    </ul>
+
+    <h3>2.4 Scheduling Metrics</h3>
+    <p>Scheduling metrics are essential tools used to evaluate, verify, and optimize the performance of a real-time system. While the primary goal of hard real-time systems is to ensure all deadlines are met, metrics provide the quantitative data needed to prove this will happen before the system even runs. Generally, a mix of those is used.</p>
+    <ul>
+        <li><strong>Average response time</strong>: no information about deadline satisfaction<br>
+            <em>t&#773;<sub>r</sub> = (1/n) &sum;<sub>i=1</sub><sup>n</sup> (f<sub>i</sub> - a<sub>i</sub>)</em>
+        </li>
+        <li><strong>Total completion time:</strong> no information about deadline satisfaction<br>
+            <em>t<sub>c</sub> = max<sub>i</sub>(f<sub>i</sub>) - min<sub>i</sub>(a<sub>i</sub>)</em>
+        </li>
+        <li><strong>Weighted sum of completion times:</strong><br>
+            <em>t<sub>w</sub> = &sum;<sub>i=1</sub><sup>n</sup> w<sub>i</sub> f<sub>i</sub></em>
+        </li>
+        <li><strong>Maximum lateness:</strong> minimizing maximum lateness does not minimize the number of tasks that miss deadlines<br>
+            <em>L<sub>max</sub> = max<sub>i</sub>(f<sub>i</sub> - d<sub>i</sub>)</em>
+        </li>
+        <li><strong>Maximum number of late tasks:</strong><br>
+            <em>N<sub>late</sub> = &sum;<sub>i=1</sub><sup>n</sup> miss(f<sub>i</sub>)</em><br>
+            where <em>miss(f<sub>i</sub>) = 0</em> if <em>f<sub>i</sub> &le; d<sub>i</sub></em>, and <em>1</em> otherwise.
+        </li>
+    </ul>
+
+    <h3>2.5 Scheduling Anomalies</h3>
+    <p>Given a set of task with feasible scheduling, following the problem definition, the optimization of some of it's parameters (like increasing the number of processors, decreasing the computation time or weakening the precedence constraints) can produce an unfeasible scheduling, as Ronald L. Graham demonstrated in 1966</p>
+
+    <h3>2.6 Problem Classification</h3>
+    <p>To make the problem more tractable a classification is needed, where different algorithms solve different problems.</p>
+    <p>Ronald Graham, Eugene Lawler, Jan Karel Lenstra, and Alexander Rinnooy Kan proposed in 1979 a theoretical categorization of the scheduling algorithm, using the following three field annotation (<em>&alpha;, &beta;, &gamma;</em>)</p>
+    <ul>
+        <li><strong>Machine environment (&alpha;)</strong>: environment on which the task set has to be scheduled (usually the number of processors)</li>
+        <li><strong>Job description (&beta;)</strong>: task and resource characteristics (like preemption, precedence, synchronization, activation, ...)</li>
+        <li><strong>Objective criterion (&gamma;)</strong>: cost function to be optimized</li>
+    </ul>
+
+    <hr>
+
+    <h2>3. Aperiodic Task Scheduling</h2>
+    <p>Based on tasks Job description &beta;: (synchronous or asynchronous activation, independent or precedence dependent, preemptive or non-preemptive), they can be solved with the following algorithms:</p>
+
+    <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%; text-align: center;">
+        <thead>
+            <tr>
+                <th></th>
+                <th><strong>sync. activation</strong></th>
+                <th><strong>preemptive<br>async. activation</strong></th>
+                <th><strong>non-preemptive<br>async. activation</strong></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>independent</strong></td>
+                <td><strong>EDD</strong> (Jackson '55)<br><em>O(n log n)</em><br>Optimal</td>
+                <td><strong>EDF</strong> (Horn '74)<br><em>O(n<sup>2</sup>)</em><br>Optimal</td>
+                <td><em><strong>Tree search</strong></em><br>(Bratley '71)<br><em>O(n &middot; n!)</em><br>Optimal</td>
+            </tr>
+            <tr>
+                <td><strong>precedence<br>constraints</strong></td>
+                <td><strong>LDF</strong> (Lawler '73)<br><em>O(n<sup>2</sup>)</em><br>Optimal</td>
+                <td><strong>EDF*</strong><br>(Chetto et al. '90)<br><em>O(n<sup>2</sup>)</em><br>Optimal</td>
+                <td><strong>Spring</strong> (Stankovic &amp;<br>Ramamritham '87)<br><em>O(n<sup>2</sup>)</em><br>Heuristic</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>3.1 EDD Algorithm</h3>
+    <p>The EDD algorithm, invented by Jackson in 1955, solves <em>1|sync|L<sub>max</sub></em>:</p>
+    <ul>
+        <li><strong>Task set</strong>: <em>J = {J<sub>i</sub> (C<sub>i</sub>,d<sub>i</sub>) | i=1,...,n}</em></li>
+        <li><strong>Principle</strong>: Earliest Due Date (complexity <em>O(n log n)</em>)</li>
+        <li><strong>Optimality</strong>: Optimal, no feasible schedule guarantee</li>
+        <li><strong>Schedulability guarantee</strong>: <em>&sum;<sub>k=1</sub><sup>i</sup> C<sub>k</sub> < d<sub>i</sub>, &forall; i = 1,...,n</em> with task listed with increasing deadlines</li>
+    </ul>
+    <p>where, in the three field notation</p>
+    <ul>
+        <li><strong>&alpha; = 1</strong>: 1 processor</li>
+        <li><strong>&beta; = sync</strong>: all tasks arrive at the same time (non-preemptive) and are implicitly independent (no precedence constraints nor shared resources)</li>
+        <li><strong>&gamma; = L<sub>max</sub></strong>: minimize the number of late tasks</li>
+    </ul>
+
+    <h3>3.2 EDF Algorithm</h3>
+    <p>The EDF algorithm, invented by Horn in 1974, solves <em>1|preem|L<sub>max</sub></em>:</p>
+    <ul>
+        <li><strong>Task set</strong>: <em>J = {J<sub>i</sub> (C<sub>i</sub>,a<sub>i</sub>,d<sub>i</sub>) | i=1,...,n}</em></li>
+        <li><strong>Principle</strong>: Earliest Deadline first (complexity <em>O(n<sup>2</sup>)</em>)</li>
+        <li><strong>Optimality</strong>: Optimal, no feasible schedule guarantee</li>
+        <li><strong>Schedulability guarantee</strong>: <em>&sum;<sub>k=1</sub><sup>i</sup> c<sub>k</sub>(t) < d<sub>i</sub>, &forall; i = 1,...,n</em> with task listed with increasing deadlines and <em>c<sub>i</sub></em> the remaining worst case execution time (WCET) of the task <em>J<sub>i</sub></em></li>
+    </ul>
+    <p>where, in the three field notation</p>
+    <ul>
+        <li><strong>&alpha; = 1</strong>: 1 processor</li>
+        <li><strong>&beta; = preem</strong>: tasks arrive at different time (preemptive),</li>
+        <li><strong>&gamma; = L<sub>max</sub></strong>: minimize the number of late tasks and are implicitly independent (no precedence constraints nor shared resources)</li>
+    </ul>
+
+    <h3>3.3 LDF Algorithm</h3>
+    <p>The LDF algorithm, invented by Lawler in 1973, solves <em>1|(prec,sync)|L<sub>max</sub></em>:</p>
+    <ul>
+        <li><strong>Task set</strong>: <em>J = {J<sub>i</sub> (C<sub>i</sub>,a<sub>i</sub>,d<sub>i</sub>) | i=1,...,n}</em> with DAG constraints</li>
+        <li><strong>Principle</strong>: Latest Deadline first (complexity <em>O(n<sup>2</sup>)</em>)</li>
+        <li><strong>Optimality</strong>: Optimal, no feasible schedule guarantee</li>
+        <li><strong>Schedulability guarantee</strong>: -</li>
+    </ul>
+    <p>where, in the three field notation</p>
+    <ul>
+        <li><strong>&alpha; = 1</strong>: 1 processor</li>
+        <li><strong>&beta; = (prec,sync)</strong>: all tasks arrive at the same time (non-preemptive) and are dependent, following the DAG</li>
+        <li><strong>&gamma; = L<sub>max</sub></strong>: minimize the number of late tasks and are implicitly independent (no precedence constraints nor shared resources)</li>
+    </ul>
+
+    <h3>3.4 LDF* Algorithm</h3>
+    <p>The EDF* algorithm, invented by Chetto in 1990, solves <em>1|(prec,sync)|L<sub>max</sub></em>:</p>
+    <ul>
+        <li><strong>Task set</strong>: <em>J = {J<sub>i</sub> (C<sub>i</sub>,a<sub>i</sub>,d<sub>i</sub>) | i=1,...,n}</em> with DAG constraints</li>
+        <li><strong>Principle</strong>: Modified Latest Deadline first, change the tasks parameters and makes them independent by exploiting the DAG, given <em>J<sub>j</sub> &rarr; J<sub>k</sub></em>:
+            <ul>
+                <li>task cannot start before its predecessors: <em>a<sub>j</sub> = max(a<sub>j</sub>, a<sub>k</sub> - C<sub>k</sub>)</em></li>
+                <li>cannot preempt their successor: <em>d<sub>j</sub> = max(d<sub>j</sub>, d<sub>k</sub> - C<sub>k</sub>)</em></li>
+            </ul>
+            and then executes EDF
+        </li>
+        <li><strong>Optimality</strong>: Optimal, no feasible schedule guarantee</li>
+        <li><strong>Schedulability guarantee</strong>: -</li>
+    </ul>
+    <p>where, in the three field notation</p>
+    <ul>
+        <li><strong>&alpha; = 1</strong>: 1 processor</li>
+        <li><strong>&beta; = (prec,sync)</strong>: all tasks arrive at the same time (non-preemptive) and are dependent, following the DAG</li>
+        <li><strong>&gamma; = L<sub>max</sub></strong>: minimize the number of late tasks and are implicitly independent (no precedence constraints nor shared resources)</li>
+    </ul>
+
+    <hr>
+
+    <h2>4. Periodic Task Scheduling</h2>
+    <p>The periodic tasks are the majority of the task type usually executed in RTOS. Based on tasks Job description &beta;, they can be solved with the following algorithms:</p>
+
+    <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%; text-align: center;">
+        <thead>
+            <tr>
+                <th></th>
+                <th><strong>d<sub>i</sub> = T<sub>i</sub></strong></th>
+                <th><strong>d<sub>i</sub> &le; T<sub>i</sub></strong></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Static<br>Priority</strong></td>
+                <td><strong>RMA</strong><br>Processor utilization approach<br><em>&sum;<sub>i=1</sub><sup>n</sup> (C<sub>i</sub> / T<sub>i</sub>) &le; n(2<sup>1/n</sup> - 1)</em></td>
+                <td><strong>DMA</strong><br>Response time approach<br><em>&forall; i, R<sub>i</sub> = C<sub>i</sub> + &sum;<sub>j &isin; hp(i)</sub> &lceil; R<sub>i</sub> / T<sub>j</sub> &rceil; C<sub>j</sub> &le; D<sub>i</sub></em></td>
+            </tr>
+            <tr>
+                <td><strong>Dynamic<br>Priority</strong></td>
+                <td><strong>EDF</strong><br>Processor utilization approach<br><em>&sum;<sub>i=1</sub><sup>n</sup> (C<sub>i</sub> / T<sub>i</sub>) &le; 1</em></td>
+                <td><strong>EDF</strong><br>Processor demand approach<br><em>&forall; L > 0, L &ge; &sum;<sub>i=1</sub><sup>n</sup> (&lfloor; (L - D<sub>i</sub>) / T<sub>i</sub> &rfloor; + 1) C<sub>i</sub></em></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>4.1 Cyclic Executive Scheduling</h3>
+    <p>Cyclic Executive Scheduling is a deterministic, time-triggered scheduling approach where tasks are executed in a fixed, repeating sequence called a major cycle. While being logically simple, might be difficult to construct (bin packing problem)</p>
+    <p>The tasks are mapped in a set of minor cycles, that than constitute the major cycle</p>
+
+    <h3>4.2 Schedulability guarantee</h3>
+    <p>The schedulability guarantee of the following algorithm is based on two different factors:</p>
+    <ul>
+        <li><strong>processor utilization factor</strong></li>
+        <li><strong>worst case response time factor</strong></li>
+    </ul>
+
+    <h4>4.2.1 Processor utilization factor</h4>
+    <p>Given a set of periodic task &Gamma;, the utilization factor U is the fraction of processor time spent in the execution of the task set</p>
+    <p style="text-align: center;"><em>U<sub>&Gamma;</sub> = &sum;<sub>i=1,...,n</sub> (C<sub>i</sub> / T<sub>i</sub>)</em></p>
+    <p>The schedulability test is sufficient, but not necessary:</p>
+    <ul>
+        <li><strong>Schedulable</strong>: <em>U<sub>&Gamma;</sub> &le; U<sub>lub</sub>(A)</em></li>
+        <li><strong>Maybe schedulable</strong>: <em>U<sub>&Gamma;</sub> > U<sub>lub</sub>(A)</em></li>
+        <li><strong>Not schedulable</strong>: <em>U<sub>&Gamma;</sub> > 1</em></li>
+    </ul>
+    <p>where <em>U<sub>lub</sub>(A)</em> is the least upper bound of the utilization factor of a given algorithm A</p>
+    <p style="text-align: center;"><em>U<sub>lub</sub>(A) = min(U<sub>lub</sub>(A, &Gamma;)) &forall; &Gamma;</em></p>
+
+    <h4>4.2.2 Response time factor</h4>
+    <p>The worst case response time analysis is sufficient and necessary condition to determine the schedulability of a task set.</p>
+    <p style="text-align: center;"><em>R<sub>i</sub> = C<sub>i</sub> + I<sub>i</sub></em></p>
+    <p>where <em>I<sub>i</sub> = &sum;<sub>j &isin; hp(i)</sub> &lceil; R<sub>i</sub> / T<sub>j</sub> &rceil; C<sub>j</sub></em> is the maximum interference that a task can experience.</p>
+    <p>Then the scheduling is granted if and only if <em>R<sub>i</sub> > d<sub>i</sub> &forall; i</em>.</p>
+
+    <h3>4.3 RM Algorithm</h3>
+    <p>The RM algorithm, invented by Liu and Layland in 1973, solves <em>1|fixed priority|&sum; U<sub>i</sub></em>:</p>
+    <ul>
+        <li><strong>Task set</strong>: <em>J = {J<sub>i</sub> (C<sub>i</sub>,a<sub>i</sub>,d<sub>i</sub>) | i=1,...,n}</em></li>
+        <li><strong>Principle</strong>: Rate Monotonic, priorities are assigned according to request rates</li>
+        <li><strong>Optimality</strong>: Optimal, no feasible schedule guarantee</li>
+        <li><strong>Schedulability guarantee</strong>:
+            <ol>
+                <li><strong>WCRT factor</strong>: <em>R<sub>i</sub> = C<sub>i</sub> + I<sub>i</sub></em></li>
+                <li><strong>U factor</strong>: <em>U<sub>lub</sub> = &sum;<sub>i=1</sub><sup>n</sup> (C<sub>i</sub> / T<sub>i</sub>) &le; n(2<sup>1/n</sup> - 1)</em></li>
+            </ol>
+        </li>
+    </ul>
+    <figure style="text-align: center;">
+        <img src="images/RM_utilization_bound.png" alt="RM utilization bound" style="width: 80%; max-width: 600px;">
+        <figcaption>Figure 3: RM utilization bound</figcaption>
+    </figure>
+    <p>where, in the three field notation</p>
+    <ul>
+        <li><strong>&alpha; = 1</strong>: 1 processor</li>
+        <li><strong>&beta; = (priority)</strong>: tasks have fixed priority (preemptive)</li>
+        <li><strong>&gamma; = &sum; U<sub>i</sub></strong>: ensure that the process utilization is within the schedulable bound</li>
+    </ul>
+
+    <h3>4.4 Priority EDF Algorithm</h3>
+    <p>The EDF priority based algorithm, invented by Liu and Layland in 1973, solves <em>1|dyn priority|C<sub>max</sub></em>:</p>
+    <ul>
+        <li><strong>Task set</strong>: <em>J = {J<sub>i</sub> (C<sub>i</sub>,a<sub>i</sub>,d<sub>i</sub>) | i=1,...,n}</em></li>
+        <li><strong>Principle</strong>: Earliest Deadline first where task with earlier deadline are assigned to higher priorities</li>
+        <li><strong>Optimality</strong>: Optimal, no feasible schedule guarantee</li>
+        <li><strong>Schedulability guarantee</strong>: <em>U<sub>lub</sub> = &sum;<sub>i=1</sub><sup>n</sup> (C<sub>i</sub> / T<sub>i</sub>) &le; 1</em> (necessary and sufficient)</li>
+    </ul>
+    <p>where, in the three field notation</p>
+    <ul>
+        <li><strong>&alpha; = 1</strong>: 1 processor</li>
+        <li><strong>&beta; = (dyn priority)</strong>: tasks have dynamic priority (preemptive)</li>
+        <li><strong>&gamma; = C<sub>max</sub></strong>: minimizes the total computation time</li>
+    </ul>
+
+    <h3>4.5 DM Algorithm</h3>
+    <p>The DM algorithm, invented by Leung and Whitehead in 1982, solves <em>1|(fixed priority, D<sub>i</sub> &le; T<sub>i</sub>)|L<sub>max</sub></em>:</p>
+    <ul>
+        <li><strong>Task set</strong>: <em>J = {J<sub>i</sub> (C<sub>i</sub>,a<sub>i</sub>,d<sub>i</sub>) | i=1,...,n}</em></li>
+        <li><strong>Principle</strong>: Deadline Monotonic, priorities are assigned according to request rates</li>
+        <li><strong>Optimality</strong>: Optimal, no feasible schedule guarantee</li>
+        <li><strong>Schedulability guarantee</strong>: <em>D<sub>i</sub> &ge; C<sub>i</sub> + I<sub>i</sub></em>, with <em>I<sub>i</sub></em> maximum interference that a task can experience.</li>
+    </ul>
+    <p>where, in the three field notation</p>
+    <ul>
+        <li><strong>&alpha; = 1</strong>: 1 processor</li>
+        <li><strong>&beta; = (priority)</strong>: tasks have fixed priority (preemptive)</li>
+        <li><strong>&gamma; = L<sub>max</sub></strong>: ensure that all the tasks meet their deadline</li>
+    </ul>
+
+    <h3>4.6 PDA EDF Algorithm</h3>
+    <p>The Processor Demand Analysis EDF algorithm, invented by Baruah, Rosier and Howell in 1990, solves <em>1|dyn priority|C<sub>max</sub></em>:</p>
+    <ul>
+        <li><strong>Task set</strong>: <em>J = {J<sub>i</sub> (C<sub>i</sub>,a<sub>i</sub>,d<sub>i</sub>) | i=1,...,n}</em></li>
+        <li><strong>Principle</strong>: Earliest Deadline first where task with earlier deadline are assigned to higher priorities</li>
+        <li><strong>Optimality</strong>: Optimal, no feasible schedule guarantee</li>
+        <li><strong>Schedulability guarantee</strong>: <em>L &ge; &sum;<sub>i=1</sub><sup>n</sup> (&lfloor; (L - D<sub>i</sub>) / T<sub>i</sub> &rfloor; + 1) C<sub>i</sub> &forall; L > 0</em>, where L is the interval length</li>
+    </ul>
+    <p>where, in the three field notation</p>
+    <ul>
+        <li><strong>&alpha; = 1</strong>: 1 processor</li>
+        <li><strong>&beta; = (dyn priority)</strong>: tasks have dynamic priority (preemptive)</li>
+        <li><strong>&gamma; = C<sub>max</sub></strong>: minimizes the total computation time</li>
+    </ul>
+
+    <h3>4.7 Comparison: RM vs EDF</h3>
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
+        <div style="width: 48%; min-width: 250px;">
+            <p><strong>RM characteristics</strong></p>
+            <ul>
+                <li>Simple to implement</li>
+                <li><em>U < 69%</em></li>
+                <li>During overload, lower priority task blocked</li>
+                <li>Leaves time for others tasks (useful in mixed tasks environment)</li>
+            </ul>
+        </div>
+        <div style="width: 48%; min-width: 250px;">
+            <p><strong>EDF characteristics</strong> (corrected title based on context)</p>
+            <ul>
+                <li>Hard to implement</li>
+                <li><em>U &cong; 100%</em></li>
+                <li>During overload, lower priority task not blocked</li>
+            </ul>
+        </div>
+    </div>
+
+    <hr>
+
+    <h2>5. Mixed Task Scheduling</h2>
+    <p>Mixed-task scheduling deals with systems where different types of tasks (periodic, sporadic, and aperiodic) must coexist on the same processor without compromising the deadlines of the critical tasks.</p>
+    <p>There are three main different approach to handle mixed tasks:</p>
+    <ul>
+        <li><strong>Immediate service</strong>: aperiodic requests are served as soon as arrived, postponing periodic tasks</li>
+        <li><strong>Background scheduling</strong>:
+            <ul>
+                <li><strong>Periodic task</strong>: assigned to high priority queue and scheduled with RM</li>
+                <li><strong>Aperiodic task</strong>: assigned to high priority queue and scheduled with FCFS (first come, first served)</li>
+            </ul>
+        </li>
+        <li><strong>Aperiodic server (static or dynamic)</strong>: uses a priority server that handles the aperiodic tasks as aperiodic ones
+            <figure style="text-align: center; margin-top: 15px;">
+                <img src="images/priority_server.png" alt="Priority server approach" style="width: 80%; max-width: 600px;">
+                <figcaption>Figure 4: Priority server approach</figcaption>
+            </figure>
+        </li>
+    </ul>
+
+    <h3>5.1 Static Priority Server</h3>
+    <p>Static priority server insert aperiodic tasks in the ready queue, mixing with periodic tasks, then apply RM as for periodic tasks.</p>
+    <p>There are different type of static priority server:</p>
+    <ul>
+        <li><strong>Polling Server</strong></li>
+        <li><strong>Deferrable Server</strong></li>
+        <li><strong>Priority Exchange</strong></li>
+        <li><strong>Sporadic Server</strong></li>
+        <li><strong>Slack Stealing</strong></li>
+    </ul>
+
+    <h4>5.1.1 Polling Server</h4>
+    <p>The aperiodic tasks accumulate in the queue and at the start of the priority server period, it sets its capacity <em>C<sub>s</sub></em> to maximum, then</p>
+    <ul>
+        <li><strong>Aperiodic task pending</strong>: the server loads the aperiodic tasks to maximum its capacity <em>C<sub>s</sub></em> (the capacity might be not fully used)</li>
+        <li><strong>Aperiodic task queue empty</strong>: the server loads no aperiodic tasks and discharge its capacity to 0</li>
+    </ul>
+    <p>The schedulability analysis is computed using the Utilization Factor (PS+RM):<br>
+        <em>U<sub>ps</sub> &le; n [ (2 / (U<sub>s</sub> + 1))<sup>1/n</sup> - 1 ]</em>
+    </p>
+
+    <h4>5.1.2 Deferrable Server</h4>
+    <p>The deferrable server is similar to the polling server, but handles the capacity discharge differently: as soon as an aperiodic tasks arrived, it is immediately moved to the priority server, until it hits the maximum capacity.</p>
+    <p>The schedulability analysis is computed using the Utilization Factor (DS+RM):<br>
+        <em>U<sub>ds</sub> &le; n [ ((U<sub>s</sub> + 2) / (2U<sub>s</sub> + 1))<sup>1/n</sup> - 1 ]</em>
+    </p>
+
+    <h4>5.1.3 PS and DS comparison</h4>
+    <p>By analyzing their utilization factor, we can find out that:</p>
+    <ul>
+        <li>Invasive behavior of the DS causes lower schedulability bound for periodic tasks</li>
+        <li>DS is more responsive than PS but decreases the utilization bound</li>
+    </ul>
+    <figure style="text-align: center;">
+        <img src="images/PSvsDS.png" alt="Least upper bound of the utilization factor of DS and PS" style="width: 80%; max-width: 600px;">
+        <figcaption>Figure 5: Least upper bound of the utilization factor of DS and PS</figcaption>
+    </figure>
+
+    <h3>5.2 Dynamic Priority Server</h3>
+    <p>Dynamic priority server adapts the static priority server approach using EDF:</p>
+    <ul>
+        <li>the deadline of the aperiodic tasks is assigned in order to not exceed the given bandwidth <em>U<sub>s</sub></em>: <em>d<sub>k</sub> = max(r<sub>k</sub>, d<sub>k-1</sub>) + C<sub>k</sub> / U<sub>s</sub></em></li>
+        <li>the periodic and aperiodic tasks are mixed and scheduled with EDF</li>
+    </ul>
+    <p>There are different type of static priority server:</p>
+    <ul>
+        <li><strong>Dynamic polling server</strong></li>
+        <li><strong>Dynamic deferrable server</strong></li>
+        <li><strong>Dynamic sporadic server</strong></li>
+        <li><strong>Total bandwidth server</strong></li>
+        <li><strong>Constant bandwidth server</strong></li>
+    </ul>
+
+    <h4>5.2.1 Total Bandwidth Server</h4>
+    <p>The schedulability analysis is computed using the Utilization Factor (TBS+EDF):<br>
+        <em>U<sub>p</sub> + U<sub>s</sub> < 1</em>
+    </p>
+
+</div>
     <div class="footer">
         <h3>Disclaimers and Simulation Notes</h3>
         <h5> Use it at your own risk, scheduling algorithms and visualizations may be wrong.</h5>
@@ -150,22 +852,6 @@
             this.arrival = arrival;
             this.period = period;
             this.deadline = deadline;
-            this.reset();
-        }
-
-        reset() {
-            this.remaining = this.computation;
-            this.is_completed = false;
-            this.is_late = false;
-            
-            // FIX: Treat deadline as absolute for aperiodic tasks, and relative for periodic tasks
-            if (this.deadline !== null) {
-                this.abs_deadline = this.is_periodic ? this.arrival + this.deadline : this.deadline;
-            } else {
-                this.abs_deadline = null;
-            }
-            
-            this.effective_arrival = this.arrival;
         }
 
         get is_periodic() {
@@ -208,6 +894,7 @@
 
     function renderTable() {
         const tbody = document.querySelector("#taskTable tbody");
+        if(!tbody) return; 
         tbody.innerHTML = "";
         globalTasks.forEach((t, index) => {
             tbody.innerHTML += `
@@ -231,112 +918,211 @@
     };
 
     // ==========================================
-    // 3. Schedulers & Engine
+    // 3. Schedulers & Engine (REWRITTEN)
     // ==========================================
-    const schedulers = {
-        edf: (ready_tasks) => ready_tasks.length === 0 ? null : ready_tasks.reduce((min, t) => ((t.abs_deadline ?? Infinity) < (min.abs_deadline ?? Infinity)) ? t : min),
-        rm:  (ready_tasks) => ready_tasks.length === 0 ? null : ready_tasks.reduce((min, t) => ((t.period ?? Infinity) < (min.period ?? Infinity)) ? t : min),
-        fcfs: (ready_tasks, current_task) => {
-            if (ready_tasks.length === 0) return null;
-            if (current_task && !current_task.is_completed) return current_task;
-            return ready_tasks.reduce((min, t) => (t.effective_arrival < min.effective_arrival) ? t : min);
-        }
-    };
-
     function runSimulation() {
+        
         if (globalTasks.length === 0) {
             document.getElementById("chart").innerHTML = "<p style='padding:20px'>Please add at least one task.</p>";
             return;
         }
 
-        const algoKey = document.getElementById("algorithm").value;
-        const scheduler = schedulers[algoKey];
-        const log = [];
-        let missedDeadlines = false;
+        const algoKey = document.getElementById("algorithm") ? document.getElementById("algorithm").value : 'edf';
         
-        let current_task = null;
-        let start_time = 0;
-
-        // NEW: Track events per task instead of globally
-        let taskEvents = [];
-
         let periods = globalTasks.filter(t => t.is_periodic).map(t => t.period);
         let limit = periods.length > 0 ? periods.reduce(lcm) : 30; 
         if (limit > 200) limit = 200; 
 
+        // Generate discrete Jobs instead of resetting task states
+        let all_jobs = [];
+        let taskEvents = [];
+        
         for (let t of globalTasks) {
-            t.reset();
-            taskEvents.push({ task: t.name, type: 'arrival', time: t.effective_arrival });
-            if (t.abs_deadline !== null) taskEvents.push({ task: t.name, type: 'deadline', time: t.abs_deadline });
+            if (t.is_periodic) {
+                for (let tick = t.arrival; tick < limit; tick += t.period) {
+                    let deadline = t.deadline !== null ? tick + t.deadline : Infinity;
+                    all_jobs.push({
+                        taskName: t.name,
+                        arrival: tick,
+                        deadline: deadline,
+                        computation: t.computation,
+                        remaining: t.computation,
+                        period: t.period
+                    });
+                    taskEvents.push({ task: t.name, type: 'arrival', time: tick });
+                    if (deadline !== Infinity) taskEvents.push({ task: t.name, type: 'deadline', time: deadline });
+                }
+            } else {
+                if (t.arrival < limit) {
+                    let deadline = t.deadline !== null ? t.deadline : Infinity; // Absolute for aperiodic
+                    all_jobs.push({
+                        taskName: t.name,
+                        arrival: t.arrival,
+                        deadline: deadline,
+                        computation: t.computation,
+                        remaining: t.computation,
+                        period: Infinity
+                    });
+                    taskEvents.push({ task: t.name, type: 'arrival', time: t.arrival });
+                    if (deadline !== Infinity) taskEvents.push({ task: t.name, type: 'deadline', time: deadline });
+                }
+            }
         }
 
+        let active_jobs = [];
+        let log = [];
+        let completedInstances = [];
+        let current_job = null;
+        let start_time = 0;
+        let missedDeadlines = false;
+
+        // Tick-by-tick simulation
         for (let tick = 0; tick < limit; tick++) {
-            // Respawn periodic tasks
-            for (let task of globalTasks) {
-                if (task.is_periodic && tick > task.effective_arrival) {
-                    if ((tick - task.effective_arrival) % task.period === 0) {
-                        if (!task.is_completed) missedDeadlines = true; 
-                        task.is_completed = false;
-                        task.remaining = task.computation;
-                        if (task.deadline !== null) task.abs_deadline = tick + task.deadline;
-                        
-                        // Record new events tied specifically to this task
-                        taskEvents.push({ task: task.name, type: 'arrival', time: tick });
-                        if (task.abs_deadline !== null) taskEvents.push({ task: task.name, type: 'deadline', time: task.abs_deadline });
-                    }
-                }
-                if (!task.is_completed && task.abs_deadline !== null && tick >= task.abs_deadline) {
+            
+            // 1. Arriving jobs enter the active queue
+            let arrivals = all_jobs.filter(j => j.arrival === tick);
+            active_jobs.push(...arrivals);
+
+            // 2. Check for missed deadlines (if a job is active at its deadline, it failed)
+            for (let j of active_jobs) {
+                if (tick >= j.deadline) {
                     missedDeadlines = true;
                 }
             }
 
-            let ready_tasks = globalTasks.filter(t => t.effective_arrival <= tick && !t.is_completed);
-            let next_task = scheduler(ready_tasks, current_task);
-
-            if (current_task && current_task.abs_deadline === tick && tick > start_time) {
-                log.push({ Task: current_task.name, Start: start_time, Finish: tick, Preempted: true, Late: false });
-                start_time = tick;
-            }
-
-            if (next_task !== current_task) {
-                if (current_task && !current_task.is_completed && tick > start_time) {
-                    let isLate = current_task.abs_deadline !== null && tick > current_task.abs_deadline;
-                    log.push({ Task: current_task.name, Start: start_time, Finish: tick, Preempted: true, Late: isLate });
+            // 3. Scheduling Algorithm
+            let next_job = null;
+            if (active_jobs.length > 0) {
+                if (algoKey === 'edf') {
+                    next_job = active_jobs.reduce((min, j) => j.deadline < min.deadline ? j : min);
+                } else if (algoKey === 'rm') {
+                    next_job = active_jobs.reduce((min, j) => j.period < min.period ? j : min);
+                } else if (algoKey === 'fcfs') {
+                    if (current_job && active_jobs.includes(current_job)) {
+                        next_job = current_job; // Non-preemptive behavior
+                    } else {
+                        next_job = active_jobs.reduce((min, j) => j.arrival < min.arrival ? j : min);
+                    }
                 }
-                current_task = next_task;
+            }
+
+            // 4. Handle Context Switches
+            if (next_job !== current_job) {
+                if (current_job && active_jobs.includes(current_job) && tick > start_time) {
+                    log.push({ Task: current_job.taskName, Start: start_time, Finish: tick, Preempted: true, Late: tick > current_job.deadline });
+                }
+                current_job = next_job;
                 start_time = tick;
             }
 
-            if (current_task) {
-                current_task.remaining--;
-                if (current_task.remaining === 0) {
-                    current_task.is_completed = true;
-                    let isLate = current_task.abs_deadline !== null && tick >= current_task.abs_deadline;
-                    log.push({ Task: current_task.name, Start: start_time, Finish: tick + 1, Preempted: false, Late: isLate });
-                    current_task = null;
+            // 5. Execute 1 tick of computation
+            if (current_job) {
+                current_job.remaining--;
+                if (current_job.remaining === 0) {
+                    let finishTime = tick + 1;
+                    let isLate = finishTime > current_job.deadline;
+                    
+                    log.push({ Task: current_job.taskName, Start: start_time, Finish: finishTime, Preempted: false, Late: isLate });
+                    completedInstances.push({
+                        name: current_job.taskName,
+                        arrival: current_job.arrival,
+                        finish: finishTime,
+                        deadline: current_job.deadline
+                    });
+                    
+                    // Remove completed job
+                    active_jobs = active_jobs.filter(j => j !== current_job);
+                    current_job = null;
                 }
             }
         }
 
-        if (current_task && !current_task.is_completed) {
-            let isLate = current_task.abs_deadline !== null && limit > current_task.abs_deadline;
-            log.push({ Task: current_task.name, Start: start_time, Finish: limit, Preempted: true, Late: isLate });
+        // Cleanup end of cycle
+        if (current_job && active_jobs.includes(current_job)) {
+            log.push({ Task: current_job.taskName, Start: start_time, Finish: limit, Preempted: true, Late: limit > current_job.deadline });
         }
 
-        document.getElementById("statusMessage").innerText = missedDeadlines ? "⚠️ Warning: One or more deadlines were missed!" : "";
-        drawGanttChart(log, globalTasks.map(t => t.name), limit, taskEvents, algoKey);
+        let statusMsg = document.getElementById("statusMessage");
+        if(statusMsg) statusMsg.innerText = missedDeadlines ? "⚠️ Warning: One or more deadlines were missed!" : "";
+        
+        // ==========================================
+        // Compute Dynamic Metrics
+        // ==========================================
+        let metrics = { avgResponseTime: 0, totalCompletionTime: 0, maxLateness: 0, lateTasksCount: 0, utilization: 0 };
+
+        globalTasks.forEach(t => {
+            if (t.is_periodic && t.period > 0) {
+                metrics.utilization += (t.computation / t.period);
+            }
+        });
+
+        let totalResp = 0;
+        let maxLate = -Infinity;
+        let lateCount = 0;
+        let minArr = Infinity;
+        let maxFin = -Infinity;
+
+        // 1. Calculate metrics for tasks that FINISHED
+        if (completedInstances.length > 0) {
+            completedInstances.forEach(inst => {
+                totalResp += (inst.finish - inst.arrival);
+                if (inst.arrival < minArr) minArr = inst.arrival;
+                if (inst.finish > maxFin) maxFin = inst.finish;
+                
+                if (inst.deadline !== Infinity) {
+                    let lateness = inst.finish - inst.deadline;
+                    if (lateness > maxLate) maxLate = lateness;
+                    if (lateness > 0) lateCount++;
+                }
+            });
+
+            metrics.avgResponseTime = (totalResp / completedInstances.length).toFixed(2);
+            metrics.totalCompletionTime = maxFin - (minArr === Infinity ? 0 : minArr);
+        }
+
+        // 2. NEW: Catch tasks that were STARVED or ABANDONED and missed their deadline
+        active_jobs.forEach(j => {
+            if (limit > j.deadline) { // If the simulation ended AFTER its deadline passed
+                let lateness = limit - j.deadline; // Calculate lateness up to the limit
+                if (lateness > maxLate) maxLate = lateness;
+                lateCount++;
+            }
+        });
+
+        metrics.maxLateness = maxLate !== -Infinity ? maxLate : 0;
+        metrics.lateTasksCount = lateCount;
+        // ==========================================
+        // Developer Debug Logging
+        // ==========================================
+        const IS_DEV_MODE = true; // Toggle this to false in production
+
+        if (IS_DEV_MODE) {
+            console.log(`\n--- DEV MODE: SIMULATION RESULTS (${algoKey.toUpperCase()}) ---`);
+            
+            console.log("1. Execution Log (Tick-by-Tick):");
+            console.table(log); 
+            
+            console.log("2. Completed Task Instances:");
+            console.table(completedInstances);
+
+            console.log("3. Final Computed Metrics:");
+            console.log(metrics);
+
+            console.log("4. Task Events (Arrivals & Deadlines):");
+            console.table(taskEvents);
+            console.log("--------------------------------------------------\n");
+        }
+
+        drawGanttChart(log, globalTasks.map(t => t.name), limit, taskEvents, algoKey, metrics);
     }
 
     // ==========================================
-    // 4. Plotly Chart Generation
+    // 4. Plotly Chart Generation & Rendering
     // ==========================================
-    function drawGanttChart(log, taskNames, limit, taskEvents, algoKey) {
+    function drawGanttChart(log, taskNames, limit, taskEvents, algoKey, metrics) { 
         const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#34495e'];
         
-        // Plotly renders categorical y-axes from bottom to top, so we reverse the array 
-        // to make T1 appear at the top. We need this reversed array to calculate Y coordinates.
         const reversedTaskNames = [...taskNames].reverse();
-
         const traces = [];
         
         taskNames.forEach((taskName, index) => {
@@ -345,7 +1131,6 @@
             const lateLog = taskLog.filter(entry => entry.Late);
             const color = colors[index % colors.length];
 
-            // 1. Trace for Normal, On-Time Execution
             if (normalLog.length > 0) {
                 traces.push({
                     name: taskName,
@@ -354,10 +1139,7 @@
                     y: normalLog.map(entry => entry.Task),
                     x: normalLog.map(entry => entry.Finish - entry.Start),
                     base: normalLog.map(entry => entry.Start),
-                    marker: { 
-                        color: color, 
-                        line: { color: 'white', width: 2 } 
-                    },
+                    marker: { color: color, line: { color: 'white', width: 2 } },
                     text: normalLog.map(() => taskName), 
                     textposition: 'inside', 
                     insidetextanchor: 'middle', 
@@ -366,7 +1148,6 @@
                 });
             }
 
-            // 2. Trace for Late Execution (Adds Hatch Pattern + Red Border)
             if (lateLog.length > 0) {
                 traces.push({
                     name: `${taskName} (Late)`,
@@ -376,12 +1157,8 @@
                     x: lateLog.map(entry => entry.Finish - entry.Start),
                     base: lateLog.map(entry => entry.Start),
                     marker: { 
-                        color: '#fff', // White base to create stripes with hatching
-                        pattern: {
-                            shape: '/', // Uses standard diagonal hatching to match visually
-                            fgcolor: '#ccc', // Use light gray color from legend gradient
-                            fgopacity: 1 // Opaque hatching lines
-                        }
+                        color: '#fff', 
+                        pattern: { shape: '/', fgcolor: '#ccc', fgopacity: 1 }
                     },
                     text: lateLog.map(() => taskName), 
                     textposition: 'inside', 
@@ -391,46 +1168,36 @@
                 });
             }
         });
+        
         const completionDots = {
             type: 'scatter',
             mode: 'markers',
             x: log.filter(entry => !entry.Preempted).map(entry => entry.Finish),
             y: log.filter(entry => !entry.Preempted).map(entry => entry.Task),
-            marker: { 
-                color: 'black', 
-                size: 14, 
-                symbol: 'circle' 
-            },
-            hoverinfo: 'skip', // Keeps the hover clean so it only shows the bar's hover info
+            marker: { color: 'black', size: 14, symbol: 'circle' },
+            hoverinfo: 'skip', 
             showlegend: false
-            
         };
 
         let shapes = [];
         let annotations = [];
 
-        // Map events to their specific Task's Y-coordinate
         taskEvents.forEach(event => {
             if (event.time > limit) return;
-            
-            // Find the integer Y-coordinate for the task (0 is bottom, 1 is next up, etc.)
             let yPos = reversedTaskNames.indexOf(event.task);
-            
-            // Bar thickness in Plotly is roughly ±0.4 from the center Y integer
             let barTop = yPos + 0.4;
             let barBottom = yPos - 0.4;
             
-
             if (event.type === 'arrival') {
                 shapes.push({
                     type: 'line', x0: event.time, x1: event.time, 
-                    y0: barBottom, y1: barTop, yref: 'y', // yref: 'y' locks it to the data axis
+                    y0: barBottom, y1: barTop, yref: 'y', 
                     line: { dash: 'dot', color: 'black', width: 2 }
                 });
                 annotations.push({
                     x: event.time, y: barBottom, yref: 'y',
                     showarrow: true, arrowhead: 2, arrowsize: 1.5, arrowcolor: 'black',
-                    ax: 0, ay: -15 // Points down
+                    ax: 0, ay: -15 
                 });
             } else if (event.type === 'deadline') {
                 shapes.push({
@@ -441,7 +1208,7 @@
                 annotations.push({
                     x: event.time, y: barTop, yref: 'y',
                     showarrow: true, arrowhead: 2, arrowsize: 1.5, arrowcolor: 'black',
-                    ax: 0, ay: 15 // Points up
+                    ax: 0, ay: 15 
                 });
             }
         });
@@ -460,26 +1227,29 @@
         Plotly.newPlot('chart', [...traces, completionDots], layout, {displayModeBar: false});
 
         // ==========================================
-        // 5. Draw Legend
+        // 5. Draw Legend & Metrics Dashboard
         // ==========================================
+        
+        const utilPercent = (metrics.utilization * 100).toFixed(1);
+        const uColor = metrics.utilization > 1 ? '#e74c3c' : '#2ecc71'; 
+        const lateColor = metrics.lateTasksCount > 0 ? '#e74c3c' : '#2c3e50';
 
         const legendHtml = `
-            <div class="legend-box">
-                <h3>How to Read the Chart</h3>
-                <div class="legend-flex">
-                    <div>
-                        <strong>Visual Key:</strong><br><br>
-                        <div class="legend-item"><span class="legend-color" style="background: #3498db;"></span> Normal Execution</div>
-                        <div class="legend-item"><span class="legend-color legend-pattern"></span> Late Execution (Past Deadline)</div>
-                        <div class="legend-item"><span style="margin-right: 10px; font-size: 14px; color: black;">⚫</span> Task Completed (Finish Line)</div>
-                        <div class="legend-item"><span style="margin-right: 14px; margin-left: 4px; font-size: 14px; color: black; font-weight: bold;">↓</span> Task Arrival</div>
-                        <div class="legend-item"><span style="margin-right: 14px; margin-left: 4px; font-size: 14px; color: black; font-weight: bold;">↑</span> Deadline</div>
-                    </div>
+            <div class="legend-box" style="margin-top: 20px; padding: 20px; background: #fdfdfd; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 20px; font-family: sans-serif;">
+                <div style="flex: 1; min-width: 280px; padding-left: 20px; border-left: 1px solid #eee;">
+                    <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 8px;">Simulation Metrics</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0; line-height: 2;">
+                        <li><strong>Processor Utilization (U):</strong> <span style="color: ${uColor}; font-weight: bold; padding: 2px 6px; background: rgba(0,0,0,0.05); border-radius: 4px;">${utilPercent}%</span> ${metrics.utilization > 1 ? '<span style="color:#e74c3c; font-size: 0.9em;">(Overload)</span>' : ''}</li>
+                        <li><strong>Average Response Time:</strong> ${metrics.avgResponseTime} ticks</li>
+                        <li><strong>Total Completion Time:</strong> ${metrics.totalCompletionTime} ticks</li>
+                        <li><strong>Maximum Lateness:</strong> ${metrics.maxLateness} ticks</li>
+                        <li><strong>Late Tasks:</strong> <span style="color: ${lateColor}; font-weight: ${metrics.lateTasksCount > 0 ? 'bold' : 'normal'};">${metrics.lateTasksCount} instance(s) missed</span></li>
+                    </ul>
                 </div>
+
             </div>
         `;
         
-        // Find or create the legend container below the chart
         let legendContainer = document.getElementById("legendContainer");
         if (!legendContainer) {
             legendContainer = document.createElement("div");
